@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/jnahelou/gcp-firewall-api/handlers"
+	"github.com/jnahelou/gcp-firewall-api/helpers"
+	"github.com/sirupsen/logrus"
 )
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -17,7 +18,11 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 // log access log
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s - %s", r.Method, r.RequestURI, r.UserAgent())
+		logrus.WithFields(logrus.Fields{
+			"method":      r.Method,
+			"request_uri": r.RequestURI,
+			"user_agent":  r.UserAgent(),
+		}).Printf("%s %s", r.Method, r.RequestURI)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -57,10 +62,12 @@ func main() {
 
 	r.Path("/_health").Methods("GET").HandlerFunc(handleHealth)
 
+	helpers.InitLogger()
+
 	srv := http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
 		Handler: r,
 	}
-	log.Printf("Listening on port %s", port)
-	log.Print(srv.ListenAndServe())
+	logrus.Printf("Listening on port %s", port)
+	logrus.Print(srv.ListenAndServe())
 }

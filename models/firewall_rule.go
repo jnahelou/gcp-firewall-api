@@ -3,9 +3,9 @@ package models
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/compute/v1"
 )
@@ -86,7 +86,7 @@ func (f *FirewallRuleClient) CreateFirewallRule(project string, rule *compute.Fi
 		return err
 	}
 
-	log.Printf("[DEBUG] CreateFirewallRule result : %v\n", resp)
+	logrus.Debugf("CreateFirewallRule result : %v\n", resp)
 
 	_, err = f.GetFirewallRule(project, rule.Name)
 	return err
@@ -107,7 +107,7 @@ func (f *FirewallRuleClient) DeleteFirewallRule(project string, name string) err
 		return err
 	}
 
-	log.Printf("[DEBUG] DeleteFirewallRule result : %v\n", resp)
+	logrus.Debugf("DeleteFirewallRule result : %v\n", resp)
 
 	return err
 }
@@ -122,7 +122,7 @@ type ApplicationRules struct {
 
 // ListApplicationFirewallRules returns a set of firewall rules related to an application
 func ListApplicationFirewallRules(manager FirewallRuleManager, project, serviceProject, application string) (*ApplicationRules, error) {
-	log.Printf("[DEBUG] Manager will list rules for project %s\n", project)
+	logrus.Debugf("Manager will list rules for project %s\n", project)
 
 	rules, err := manager.ListFirewallRules(project)
 	if err != nil {
@@ -144,7 +144,7 @@ func ListApplicationFirewallRules(manager FirewallRuleManager, project, serviceP
 // CreateFirewallRule create given firewall rule on given project
 func CreateFirewallRule(manager FirewallRuleManager, project string, serviceProject string, application string, ruleName string, rule compute.Firewall) error {
 	rule.Name = fmt.Sprintf("%s-%s-%s", serviceProject, application, ruleName)
-	log.Printf("[DEBUG] Manager will create %s on %s\n", rule.Name, project)
+	logrus.Debugf("Manager will create %s on %s\n", rule.Name, project)
 	return manager.CreateFirewallRule(project, &rule)
 }
 
@@ -159,6 +159,9 @@ func CreateApplicationFirewallRules(manager FirewallRuleManager, appRules Applic
 		ruleName := rule.CustomName
 		err := CreateFirewallRule(manager, project, serviceProject, application, ruleName, rule.Rule)
 		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"go-error": err,
+			}).Error("Error creating firewall rules")
 			errs = append(errs, err)
 		}
 	}
@@ -171,7 +174,7 @@ func CreateApplicationFirewallRules(manager FirewallRuleManager, appRules Applic
 // DeleteFirewallRule delete firewall rule mathing project, service project, application name and rule name
 func DeleteFirewallRule(manager FirewallRuleManager, project, serviceProject, application, customName string) error {
 	ruleName := fmt.Sprintf("%s-%s-%s", serviceProject, application, customName)
-	log.Printf("[DEBUG] Manager will delete %s on %s.\n", ruleName, project)
+	logrus.Debugf("Manager will delete %s on %s.\n", ruleName, project)
 	return manager.DeleteFirewallRule(project, ruleName)
 }
 
@@ -183,7 +186,9 @@ func DeleteApplicationFirewallRules(manager FirewallRuleManager, appRules Applic
 
 	rules, err := ListApplicationFirewallRules(manager, project, serviceProject, application)
 	if err != nil {
-		log.Printf("[ERROR] Unable to list rules during DeleteApplicationFirewallRules. Got error : %v", err)
+		logrus.WithFields(logrus.Fields{
+			"go-error": err,
+		}).Error("Error listing firewall rules")
 		return err
 	}
 
@@ -191,6 +196,9 @@ func DeleteApplicationFirewallRules(manager FirewallRuleManager, appRules Applic
 	for _, rule := range rules.Rules {
 		err := DeleteFirewallRule(manager, project, serviceProject, application, rule.CustomName)
 		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"go-error": err,
+			}).Error("Error deletinh firewall rules")
 			errs = append(errs, err)
 		}
 	}
