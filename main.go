@@ -58,6 +58,7 @@ func main() {
 	// Manage a specific rule
 	ruleRouter := r.PathPrefix("/project/{project}/service-project/{service-project}/application/{application}/name/{rule}").Subrouter()
 	ruleRouter.Path("").Methods("PUT").HandlerFunc(handlers.UpdateFirewallRuleHandler)
+	ruleRouter.Path("").Methods("POST").HandlerFunc(handlers.CreateFirewallRuleHandler)
 	ruleRouter.Path("").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRuleHandler)
 	ruleRouter.Path("").Methods("GET").HandlerFunc(handlers.GetFirewallRuleHandler)
 
