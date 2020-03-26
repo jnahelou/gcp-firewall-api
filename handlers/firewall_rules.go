@@ -45,6 +45,36 @@ func ListFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(res))
 }
 
+// GetFirewallRuleHandler return mathing firewall rule
+func GetFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
+	project, serviceProject, application, rule := getVars(r)
+
+	manager, err := models.NewFirewallRuleClient()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	googleRule, err := models.GetFirewallRule(manager, project, serviceProject, application, rule)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Cast into our rule
+	customRule := models.FirewallRule{
+		CustomName: rule,
+		Rule:       *googleRule,
+	}
+
+	res, err := json.Marshal(customRule)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprint(w, string(res))
+}
+
 // CreateFirewallRulesHandler create a set of firewall rules
 func CreateFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
 	project, serviceProject, application, _ := getVars(r)

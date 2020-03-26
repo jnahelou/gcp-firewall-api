@@ -148,6 +148,13 @@ func CreateFirewallRule(manager FirewallRuleManager, project string, serviceProj
 	return manager.CreateFirewallRule(project, &rule)
 }
 
+// GetFirewallRule return matching firewall rule
+func GetFirewallRule(manager FirewallRuleManager, project string, serviceProject string, application string, ruleName string) (*compute.Firewall, error) {
+	logrus.Debugf("Searching rule mathing project '%s', service project '%s', application '%s' and name '%s'", project, serviceProject, application, ruleName)
+	n := fmt.Sprintf("%s-%s-%s", serviceProject, application, ruleName)
+	return manager.GetFirewallRule(project, n)
+}
+
 // CreateApplicationFirewallRules create all provided firewall rules
 func CreateApplicationFirewallRules(manager FirewallRuleManager, appRules ApplicationRules) error {
 	project := appRules.Project
