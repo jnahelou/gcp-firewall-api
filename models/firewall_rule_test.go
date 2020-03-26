@@ -38,6 +38,12 @@ func (f *FirewallRuleDummyClient) GetFirewallRule(project, name string) (*comput
 }
 
 func (f *FirewallRuleDummyClient) CreateFirewallRule(project string, rule *compute.Firewall) error {
+	for _, local_rule := range f.Rules[project] {
+		if local_rule.Name == rule.Name {
+			return fmt.Errorf("Rule already exists")
+		}
+	}
+
 	f.Rules[project] = append(f.Rules[project], rule)
 	return nil
 }
@@ -95,6 +101,12 @@ func TestCreateApplicationFirewallRules(t *testing.T) {
 	if manager.Rules[project][0].Name != expected {
 		t.Errorf("Name don't match format. Got %s, expected %s\n", manager.Rules[project][0].Name, expected)
 
+	}
+
+	// Inster existing rule should trigger error
+	err = CreateApplicationFirewallRules(manager, app)
+	if err == nil {
+		t.Errorf("Expected error during insert if rule already exists")
 	}
 
 }

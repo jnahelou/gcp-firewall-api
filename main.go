@@ -22,13 +22,11 @@ func main() {
 
 	r := mux.NewRouter()
 	r.Path("/_healthz").Methods("GET").HandlerFunc(handleHealth)
-	r.Path("/project/{project}/service-project/{service-project}/application/{application}").Methods("GET").HandlerFunc(handlers.ListFirewallRuleHandler)
-	r.Path("/project/{project}/service-project/{service-project}/application/{application}").Methods("POST").HandlerFunc(handlers.CreateFirewallRuleHandler)
-	r.Path("/project/{project}/service-project/{service-project}/application/{application}").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRuleHandler)
-
-	// TODO
-	//r.Path("/project/{project}/service-project/{service-project}/application/{application}/rule/{rule}").Methods("POST").HandlerFunc()
-	//r.Path("/project/{project}/service-project/{service-project}/application/{application}/rule/{rule}").Methods("DELETE").HandlerFunc()
+	r.Path("/project/{project}/service-project/{service-project}/application/{application}").Methods("GET").HandlerFunc(handlers.ListFirewallRulesHandler)
+	r.Path("/project/{project}/service-project/{service-project}/application/{application}").Methods("POST").HandlerFunc(handlers.CreateFirewallRulesHandler)
+	r.Path("/project/{project}/service-project/{service-project}/application/{application}").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRulesHandler)
+	r.Path("/project/{project}/service-project/{service-project}/application/{application}/name/{rule}").Methods("POST").HandlerFunc(handlers.CreateFirewallRuleHandler)
+	r.Path("/project/{project}/service-project/{service-project}/application/{application}/name/{rule}").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRuleHandler)
 
 	srv := http.Server{
 		Addr:    fmt.Sprintf(":%s", port),

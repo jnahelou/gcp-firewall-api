@@ -137,19 +137,35 @@ func ListApplicationFirewallRules(manager FirewallRuleManager, project, serviceP
 	return &ApplicationRules{Project: project, ServiceProject: serviceProject, Application: application, Rules: applicationRules}, nil
 }
 
+func CreateFirewallRule(manager FirewallRuleManager, project string, serviceProject string, application string, ruleName string, rule compute.Firewall) error {
+	rule.Name = fmt.Sprintf("%s-%s-%s", serviceProject, application, ruleName)
+	fmt.Printf("[DEBUG] Manager will create %s on %s\n", rule.Name, project)
+	return manager.CreateFirewallRule(project, &rule)
+}
+
 func CreateApplicationFirewallRules(manager FirewallRuleManager, appRules ApplicationRules) error {
 	project := appRules.Project
 	serviceProject := appRules.ServiceProject
 	application := appRules.Application
 
-	var err error
+	var errs []error
 	for _, rule := range appRules.Rules {
-		rule.Rule.Name = fmt.Sprintf("%s-%s-%s", serviceProject, application, rule.CustomName)
-		fmt.Printf("[DEBUG] Manager will create %s on %s\n", rule.Rule.Name, project)
-		err = manager.CreateFirewallRule(project, &rule.Rule)
+		ruleName := rule.CustomName
+		err := CreateFirewallRule(manager, project, serviceProject, application, ruleName, rule.Rule)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
+	if len(errs) != 0 {
+		return fmt.Errorf("At least one rule cannot be created. Error : %v\n", errs)
+	}
+	return nil
+}
 
-	return err
+func DeleteFirewallRule(manager FirewallRuleManager, project, serviceProject, application, customName string) error {
+	ruleName := fmt.Sprintf("%s-%s-%s", serviceProject, application, customName)
+	fmt.Printf("[DEBUG] Manager will delete %s on %s.\n", ruleName, project)
+	return manager.DeleteFirewallRule(project, ruleName)
 }
 
 func DeleteApplicationFirewallRules(manager FirewallRuleManager, appRules ApplicationRules) error {
@@ -162,15 +178,17 @@ func DeleteApplicationFirewallRules(manager FirewallRuleManager, appRules Applic
 		log.Printf("[ERROR] Unable to list rules during DeleteApplicationFirewallRules. Got error : %v", err)
 		return err
 	}
-	for _, rule := range rules.Rules {
-		name := fmt.Sprintf("%s-%s", serviceProject, application)
-		fmt.Printf("[DEBUG] Manager will delete %s on %s. Content %v\n", name, project, rule)
 
-		err = manager.DeleteFirewallRule(project, rule.Rule.Name)
+	var errs []error
+	for _, rule := range rules.Rules {
+		err := DeleteFirewallRule(manager, project, serviceProject, application, rule.CustomName)
 		if err != nil {
-			fmt.Printf("[ERROR] Unable to delete rule %s. Got error : %v\n", rule.Rule.Name, err)
-			return err
+			errs = append(errs, err)
 		}
+	}
+
+	if len(errs) != 0 {
+		return fmt.Errorf("At least one rule cannot be destroyed. Error : %v\n", errs)
 	}
 
 	return err
