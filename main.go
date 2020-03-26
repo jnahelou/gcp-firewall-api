@@ -10,32 +10,57 @@ import (
 	"github.com/jnahelou/gcp-firewall-api/handlers"
 )
 
+func handleHealth(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Ok")
+}
+
+// log access log
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s - %s", r.Method, r.RequestURI, r.UserAgent())
+		next.ServeHTTP(w, r)
+	})
+}
+
+// define JSON as default return content type
+func contentTypeMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-type", "application/json; charset=utf-8")
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
-		log.Printf("Defaulting to port %s", port)
 	}
 
-	log.Printf("Listening on port %s", port)
+	r := mux.NewRouter().StrictSlash(true)
+	// Disable http access log on testing
+	if os.Getenv("CI") == "" {
+		r.Use(loggingMiddleware)
+	}
+	r.Use(contentTypeMiddleware)
 
-	r := mux.NewRouter()
-	r.Path("/_healthz").Methods("GET").HandlerFunc(handleHealth)
-	r.Path("/project/{project}/service-project/{service-project}/application/{application}").Methods("GET").HandlerFunc(handlers.ListFirewallRulesHandler)
-	r.Path("/project/{project}/service-project/{service-project}/application/{application}").Methods("POST").HandlerFunc(handlers.CreateFirewallRulesHandler)
-	r.Path("/project/{project}/service-project/{service-project}/application/{application}").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRulesHandler)
-	r.Path("/project/{project}/service-project/{service-project}/application/{application}/name/{rule}").Methods("POST").HandlerFunc(handlers.CreateFirewallRuleHandler)
-	r.Path("/project/{project}/service-project/{service-project}/application/{application}/name/{rule}").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRuleHandler)
+	// Manage sets of rules
+	managerRouter := r.PathPrefix("/project/{project}/service-project/{service-project}/application/{application}").Subrouter()
+	managerRouter.Path("").Methods("GET").HandlerFunc(handlers.ListFirewallRulesHandler)
+	managerRouter.Path("").Methods("POST").HandlerFunc(handlers.CreateFirewallRulesHandler)
+	managerRouter.Path("").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRulesHandler)
+
+	// Manage a specific rule
+	ruleRouter := r.PathPrefix("/project/{project}/service-project/{service-project}/application/{application}/name/{rule}").Subrouter()
+	ruleRouter.Path("").Methods("PUT").HandlerFunc(handlers.UpdateFirewallRuleHandler)
+	ruleRouter.Path("").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRuleHandler)
+
+	r.Path("/_health").Methods("GET").HandlerFunc(handleHealth)
 
 	srv := http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
 		Handler: r,
 	}
-
+	log.Printf("Listening on port %s", port)
 	log.Print(srv.ListenAndServe())
-}
-
-func handleHealth(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Ok")
 }
