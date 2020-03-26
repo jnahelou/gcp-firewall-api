@@ -38,8 +38,8 @@ func (f *FirewallRuleDummyClient) GetFirewallRule(project, name string) (*comput
 }
 
 func (f *FirewallRuleDummyClient) CreateFirewallRule(project string, rule *compute.Firewall) error {
-	for _, local_rule := range f.Rules[project] {
-		if local_rule.Name == rule.Name {
+	for _, r := range f.Rules[project] {
+		if r.Name == rule.Name {
 			return fmt.Errorf("Rule already exists")
 		}
 	}
