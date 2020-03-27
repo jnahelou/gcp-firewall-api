@@ -51,16 +51,16 @@ func main() {
 
 	// Manage sets of rules
 	managerRouter := r.PathPrefix("/project/{project}/service-project/{service-project}/application/{application}").Subrouter()
-	managerRouter.Path("").Methods("GET").HandlerFunc(handlers.ListFirewallRulesHandler)
 	managerRouter.Path("").Methods("POST").HandlerFunc(handlers.CreateFirewallRulesHandler)
+	managerRouter.Path("").Methods("GET").HandlerFunc(handlers.ListFirewallRulesHandler)
 	managerRouter.Path("").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRulesHandler)
 
 	// Manage a specific rule
 	ruleRouter := r.PathPrefix("/project/{project}/service-project/{service-project}/application/{application}/name/{rule}").Subrouter()
-	ruleRouter.Path("").Methods("PUT").HandlerFunc(handlers.UpdateFirewallRuleHandler)
 	ruleRouter.Path("").Methods("POST").HandlerFunc(handlers.CreateFirewallRuleHandler)
-	ruleRouter.Path("").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRuleHandler)
 	ruleRouter.Path("").Methods("GET").HandlerFunc(handlers.GetFirewallRuleHandler)
+	ruleRouter.Path("").Methods("PUT").HandlerFunc(handlers.UpdateFirewallRuleHandler)
+	ruleRouter.Path("").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRuleHandler)
 
 	r.Path("/_health").Methods("GET").HandlerFunc(handleHealth)
 
