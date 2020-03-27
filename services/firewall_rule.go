@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jnahelou/gcp-firewall-api/models"
+	"github.com/adeo/iwc-gcp-firewall-api/models"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/api/compute/v1"
 )

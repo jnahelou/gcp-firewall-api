@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/jnahelou/gcp-firewall-api/helpers"
-	"github.com/jnahelou/gcp-firewall-api/models"
-	"github.com/jnahelou/gcp-firewall-api/services"
+	"github.com/adeo/iwc-gcp-firewall-api/helpers"
+	"github.com/adeo/iwc-gcp-firewall-api/models"
+	"github.com/adeo/iwc-gcp-firewall-api/services"
 	"github.com/sirupsen/logrus"
 	compute "google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"

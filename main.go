@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/adeo/iwc-gcp-firewall-api/handlers"
+	"github.com/adeo/iwc-gcp-firewall-api/helpers"
 	"github.com/gorilla/mux"
-	"github.com/jnahelou/gcp-firewall-api/handlers"
-	"github.com/jnahelou/gcp-firewall-api/helpers"
 	"github.com/sirupsen/logrus"
 )
 

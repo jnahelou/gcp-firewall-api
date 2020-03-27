@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/jnahelou/gcp-firewall-api/models"
+	"github.com/adeo/iwc-gcp-firewall-api/models"
 	"github.com/sirupsen/logrus"
 	compute "google.golang.org/api/compute/v1"
 )

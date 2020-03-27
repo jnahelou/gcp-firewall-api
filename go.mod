@@ -1,4 +1,4 @@
-module github.com/jnahelou/gcp-firewall-api
+module github.com/adeo/iwc-gcp-firewall-api
 
 go 1.13
 
