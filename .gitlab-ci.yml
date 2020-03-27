@@ -1,0 +1,64 @@
+stages:
+  - test
+  - build
+  - deploy
+
+.template: &template
+  tags:
+    - adeo-cloud
+
+.gcloud_template: &gcloud_template
+  <<: *template
+  before_script:
+    - vault version
+    - gcloud version
+    - export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id=$VAULT_ROLE_ID secret_id=$VAULT_SECRET_ID)
+    - vault kv get -field=service_account_key secret/gcp-firewall-api | gcloud auth activate-service-account --key-file=-
+    - export PROJECT=$(vault kv get -field=project secret/gcp-firewall-api)
+
+Test:
+  <<: *template
+  stage: test
+  image: golang:1.13
+  before_script:
+    - go mod download
+  script:
+    - go test -v ./...
+
+Build:
+  <<: *template
+  stage: build
+  image: golang:1.13
+  before_script:
+    - go mod download
+    - go get github.com/mitchellh/gox
+    - export VERSION=$(git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || echo "v0.0.0-${CI_COMMIT_SHORT_SHA}")
+  script:
+    - gox -arch="amd64" -os="linux darwin windows freebsd" -output="./bin/{{.Dir}}-${VERSION}-{{.OS}}-{{.Arch}}"
+  artifacts:
+    paths:
+      - bin/
+
+Build docker image:
+  <<: *template
+  stage: build
+  services:
+    - docker:19.03.8-dind
+  before_script:
+    - docker info
+  script:
+    - docker build --tag adeo/gcp-firewall-api .
+
+Google Cloud Build:
+  <<: *gcloud_template
+  stage: build
+  image: adeo-docker-adeo-iaaswecan-dev.jfrog.io/iwc-gcloud-vault-terraform:alpine
+  script:
+    - gcloud builds submit --tag gcr.io/${PROJECT}/gcp-firewall-api --project ${PROJECT}
+
+Google Cloud Run:
+  <<: *gcloud_template
+  stage: deploy
+  image: adeo-docker-adeo-iaaswecan-dev.jfrog.io/iwc-gcloud-vault-terraform:alpine
+  script:
+    - gcloud run deploy --image gcr.io/${PROJECT}/gcp-firewall-api gcp-firewall-api --platform managed --no-allow-unauthenticated --quiet --project ${PROJECT}
