@@ -3,7 +3,6 @@ package models
 import (
 	"context"
 
-	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/compute/v1"
 )
@@ -14,6 +13,14 @@ type FirewallRule struct {
 	CustomName string           `json:"custom_name"`
 }
 
+// ApplicationRules defines our rule
+type ApplicationRules struct {
+	Project        string
+	ServiceProject string
+	Application    string
+	Rules          FirewallRuleList
+}
+
 // FirewallRuleList describe a set of firewall rull
 type FirewallRuleList []FirewallRule
 
@@ -22,7 +29,7 @@ type FirewallRuleManager interface {
 	ListFirewallRules(project string) ([]*compute.Firewall, error)
 	GetFirewallRule(project, name string) (*compute.Firewall, error)
 	CreateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error)
-	UpdateFirewallRule(project string, rule *compute.Firewall) error
+	UpdateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error)
 	DeleteFirewallRule(project, name string) error
 }
 
@@ -79,40 +86,25 @@ func (f *FirewallRuleClient) GetFirewallRule(project, name string) (*compute.Fir
 func (f *FirewallRuleClient) CreateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error) {
 	ctx := context.Background()
 
-	resp, err := f.computeService.Firewalls.Insert(project, rule).Context(ctx).Do()
+	_, err := f.computeService.Firewalls.Insert(project, rule).Context(ctx).Do()
 	if err != nil {
 		return nil, err
 	}
-
-	logrus.Debugf("CreateFirewallRule result : %v\n", resp)
 
 	return f.GetFirewallRule(project, rule.Name)
 }
 
 // UpdateFirewallRule update given firewall rule in given project
-func (f *FirewallRuleClient) UpdateFirewallRule(project string, rule *compute.Firewall) error {
-	_, err := f.GetFirewallRule(project, rule.Name)
-	return err
+func (f *FirewallRuleClient) UpdateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error) {
+	_, err := f.computeService.Firewalls.Update(project, rule.Name, rule).Context(context.Background()).Do()
+	if err != nil {
+		return nil, err
+	}
+	return f.GetFirewallRule(project, rule.Name)
 }
 
 // DeleteFirewallRule delete firewall rule matching given project and name
 func (f *FirewallRuleClient) DeleteFirewallRule(project string, name string) error {
-	ctx := context.Background()
-
-	resp, err := f.computeService.Firewalls.Delete(project, name).Context(ctx).Do()
-	if err != nil {
-		return err
-	}
-
-	logrus.Debugf("DeleteFirewallRule result : %v\n", resp)
-
+	_, err := f.computeService.Firewalls.Delete(project, name).Context(context.Background()).Do()
 	return err
-}
-
-// ApplicationRules defines a set of rules apply for an Application in a GCP Project
-type ApplicationRules struct {
-	Project        string
-	ServiceProject string
-	Application    string
-	Rules          FirewallRuleList
 }

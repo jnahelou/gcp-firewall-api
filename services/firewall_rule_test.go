@@ -52,9 +52,9 @@ func (f *FirewallRuleDummyClient) CreateFirewallRule(project string, rule *compu
 	return rule, nil
 }
 
-func (f *FirewallRuleDummyClient) UpdateFirewallRule(project string, rule *compute.Firewall) error {
+func (f *FirewallRuleDummyClient) UpdateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error) {
 	// TODO
-	return nil
+	return nil, nil
 }
 
 func (f *FirewallRuleDummyClient) DeleteFirewallRule(project, name string) error {
