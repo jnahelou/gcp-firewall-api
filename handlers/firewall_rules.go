@@ -10,6 +10,7 @@ import (
 	"github.com/jnahelou/gcp-firewall-api/services"
 	"github.com/sirupsen/logrus"
 	compute "google.golang.org/api/compute/v1"
+	"google.golang.org/api/googleapi"
 )
 
 // ListFirewallRuleHandler returns a set of firewall rules
@@ -47,6 +48,14 @@ func GetFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	applicationRule, err := services.GetFirewallRule(manager, project, serviceProject, application, rule)
+
+	// Handle a proper 404
+	if value, ok := err.(*googleapi.Error); ok {
+		w.WriteHeader(value.Code)
+		fmt.Fprint(w, models.NewGoogleApplicationError(value).JSON())
+		return
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -107,8 +116,15 @@ func DeleteFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = services.DeleteFirewallRule(manager, project, serviceProject, application, rule)
+
+	// Handle a proper 404
+	if value, ok := err.(*googleapi.Error); ok {
+		w.WriteHeader(value.Code)
+		fmt.Fprint(w, models.NewGoogleApplicationError(value).JSON())
+		return
+	}
+
 	if err != nil {
-		// TODO: if rule not found, its raise an error 500. It should not. Test error type
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
