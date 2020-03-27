@@ -11,10 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func handleHealth(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Ok")
-}
-
 // log access log
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +58,7 @@ func main() {
 	ruleRouter.Path("").Methods("PUT").HandlerFunc(handlers.UpdateFirewallRuleHandler)
 	ruleRouter.Path("").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRuleHandler)
 
-	r.Path("/_health").Methods("GET").HandlerFunc(handleHealth)
+	r.Path("/_health").Methods("GET").HandlerFunc(handlers.HealthCheckHandler)
 
 	helpers.InitLogger()
 
