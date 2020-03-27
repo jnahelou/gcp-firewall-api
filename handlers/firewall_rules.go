@@ -12,8 +12,8 @@ import (
 	compute "google.golang.org/api/compute/v1"
 )
 
-// ListFirewallRulesHandler returns a set of firewall rules
-func ListFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
+// ListFirewallRuleHandler returns a set of firewall rules
+func ListFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 	project, serviceProject, application, _ := helpers.GetMuxVars(r)
 
 	manager, err := models.NewFirewallRuleClient()
@@ -22,78 +22,18 @@ func ListFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	frs, err := services.ListApplicationFirewallRules(manager, project, serviceProject, application)
+	applicationRule, err := services.ListFirewallRule(manager, project, serviceProject, application)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	res, err := json.Marshal(frs)
+	res, err := json.Marshal(applicationRule)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	fmt.Fprint(w, string(res))
-}
-
-// DeleteFirewallRulesHandler delete all application firewall rules
-func DeleteFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
-	project, serviceProject, application, _ := helpers.GetMuxVars(r)
-	logrus.Debugf("Ask to delete all rules for application %s in project %s/%s\n", application, project, serviceProject)
-
-	manager, err := models.NewFirewallRuleClient()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	app := models.ApplicationRules{
-		Project:        project,
-		ServiceProject: serviceProject,
-		Application:    application,
-		Rules:          nil,
-	}
-
-	err = services.DeleteApplicationFirewallRules(manager, app)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// CreateFirewallRulesHandler create a set of firewall rules
-func CreateFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
-	project, serviceProject, application, _ := helpers.GetMuxVars(r)
-
-	var rules models.FirewallRuleList
-
-	err := json.NewDecoder(r.Body).Decode(&rules)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	logrus.Debugf("Ask to create rules on project '%s', for service project '%s', for application %s:\n", project, serviceProject, application)
-	for _, r := range rules {
-		logrus.Printf("Rule: %s\n", r.CustomName)
-	}
-
-	app := models.ApplicationRules{Project: project, ServiceProject: serviceProject, Application: application, Rules: rules}
-	manager, err := models.NewFirewallRuleClient()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	err = services.CreateApplicationFirewallRules(manager, app)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusCreated)
 }
 
 // GetFirewallRuleHandler return mathing firewall rule
@@ -106,19 +46,13 @@ func GetFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	googleRule, err := services.GetFirewallRule(manager, project, serviceProject, application, rule)
+	applicationRule, err := services.GetFirewallRule(manager, project, serviceProject, application, rule)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Cast into our rule
-	customRule := models.FirewallRule{
-		CustomName: rule,
-		Rule:       *googleRule,
-	}
-
-	res, err := json.Marshal(customRule)
+	res, err := json.Marshal(applicationRule)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -145,65 +79,19 @@ func CreateFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	googleRule, err := services.CreateFirewallRule(manager, project, serviceProject, application, rule, body)
+	applicationRule, err := services.CreateFirewallRule(manager, project, serviceProject, application, rule, body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// Cast into our rule
-	customRule := models.FirewallRule{
-		CustomName: rule,
-		Rule:       *googleRule,
-	}
 
-	res, err := json.Marshal(customRule)
+	res, err := json.Marshal(applicationRule)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprint(w, string(res))
-}
-
-// UpdateFirewallRuleHandler recreate the given firewall rule
-func UpdateFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
-	project, serviceProject, application, rule := helpers.GetMuxVars(r)
-	logrus.Debugf("Ask to recreate rule %s %s %s %s\n", project, serviceProject, application, rule)
-
-	var frule compute.Firewall
-
-	err := json.NewDecoder(r.Body).Decode(&frule)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	manager, err := models.NewFirewallRuleClient()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	googleRule, err := services.CreateFirewallRule(manager, project, serviceProject, application, rule, frule)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Cast into our rule
-	customRule := models.FirewallRule{
-		CustomName: rule,
-		Rule:       *googleRule,
-	}
-
-	res, err := json.Marshal(customRule)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, string(res))
 }
 

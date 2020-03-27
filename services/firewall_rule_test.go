@@ -25,7 +25,7 @@ func NewFirewallRuleDummyClient() (*FirewallRuleDummyClient, error) {
 	return &manager, nil
 }
 
-func (f *FirewallRuleDummyClient) ListFirewallRules(project string) ([]*compute.Firewall, error) {
+func (f *FirewallRuleDummyClient) ListFirewallRule(project string) ([]*compute.Firewall, error) {
 	if value, ok := f.Rules[project]; ok {
 		return value, nil
 	}
@@ -52,52 +52,40 @@ func (f *FirewallRuleDummyClient) CreateFirewallRule(project string, rule *compu
 	return rule, nil
 }
 
-func (f *FirewallRuleDummyClient) UpdateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error) {
-	// TODO
-	return nil, nil
-}
-
 func (f *FirewallRuleDummyClient) DeleteFirewallRule(project, name string) error {
 	rules := f.Rules[project]
-	for index, rule := range rules {
-		// Swap with last and drop last
+	for i, rule := range rules {
 		if rule.Name == name {
-			rules[index] = rules[len(rules)-1]
+			// Delete matching route
+			rules[i] = rules[len(rules)-1]
 			f.Rules[project] = rules[:len(rules)-1]
 			return nil
 		}
 	}
-	// TODO double check if deletion of non existing rule trigger error or nil
-	return nil
+	return fmt.Errorf("Rule not found")
 }
 
-func TestCreateApplicationFirewallRules(t *testing.T) {
+func TestCreateFirewallRule(t *testing.T) {
 	manager, _ := NewFirewallRuleDummyClient()
-
 	project := "dummy-project"
 	serviceProject := "dummy-service-project"
 	application := "dummy-application"
-	var rules models.FirewallRuleList
+	var rules models.FirewallRules
 	rule := models.FirewallRule{
 		Rule:       compute.Firewall{Name: "remote", Network: "global/networks/default", Allowed: []*compute.FirewallAllowed{&compute.FirewallAllowed{Ports: []string{"22", "3389"}, IPProtocol: "TCP"}}},
 		CustomName: "allow-tcp-22-3389",
 	}
 	rules = append(rules, rule)
 
-	app := models.ApplicationRules{
-		Project:        project,
-		ServiceProject: serviceProject,
-		Application:    application,
-		Rules:          rules,
+	// Create dummy rule
+	for _, rule := range rules {
+		_, err := CreateFirewallRule(manager, project, serviceProject, application, rule.CustomName, rule.Rule)
+		if err != nil {
+			t.Fatalf("Something wrong during rule creation. Got error %v\n", err)
+		}
 	}
 
-	err := CreateApplicationFirewallRules(manager, app)
-	if err != nil {
-		t.Fatalf("Something wrong during rule creation. Got error %v\n", err)
-	}
-
-	// Check properties
-	// TODO create helper func
+	// Test if expected
 	expected := fmt.Sprintf("%s-%s-%s", serviceProject, application, rule.CustomName)
 	if manager.Rules[project][0].Name != expected {
 		t.Errorf("Name don't match format. Got %s, expected %s\n", manager.Rules[project][0].Name, expected)
@@ -105,14 +93,14 @@ func TestCreateApplicationFirewallRules(t *testing.T) {
 	}
 
 	// Inster existing rule should trigger error
-	err = CreateApplicationFirewallRules(manager, app)
+	_, err := CreateFirewallRule(manager, project, serviceProject, application, rule.CustomName, rule.Rule)
 	if err == nil {
 		t.Errorf("Expected error during insert if rule already exists")
 	}
 
 }
 
-func TestListApplicationFirewallRules(t *testing.T) {
+func TestListFirewallRule(t *testing.T) {
 	// Add dummy content
 	manager, _ := NewFirewallRuleDummyClient()
 
@@ -120,6 +108,7 @@ func TestListApplicationFirewallRules(t *testing.T) {
 	serviceProjects := []string{"kubernetes-demo", "kubernetes-training"}
 	applications := []string{"the-hard-way", "the-easy-way"}
 
+	// Create 4 dummy rules
 	for _, serviceProject := range serviceProjects {
 		for _, application := range applications {
 			name := fmt.Sprintf("%s-%s-%s", serviceProject, application, "allow-external")
@@ -129,71 +118,52 @@ func TestListApplicationFirewallRules(t *testing.T) {
 	}
 
 	// Ask for non-existing project
-	_, err := ListApplicationFirewallRules(manager, "non-existing-project", serviceProjects[0], applications[0])
+	_, err := ListFirewallRule(manager, "non-existing-project", serviceProjects[0], applications[0])
 	if err == nil {
 		t.Fatalf("Expected error during ListApplicationFirewallRules on a non-existing project")
 	}
 
 	// Ask for one application in a random project
-	rules, err := ListApplicationFirewallRules(manager, project, serviceProjects[0], applications[0])
+	applicationRule, err := ListFirewallRule(manager, project, serviceProjects[0], applications[0])
 	if err != nil {
 		t.Fatalf("Something wrong during ListApplicationFirewallRules. Got error : %v\n", err)
 	}
 
-	if len(rules.Rules) != 1 {
-		t.Errorf("Wrong rules count for project %s and application %s", serviceProjects[0], applications[0])
+	if len(applicationRule.Rules) != 1 {
+		t.Errorf("Wrong rules count for project %s and application %s. Got %d expected %d", serviceProjects[0], applications[0], len(applicationRule.Rules), 1)
 	}
 }
 
 func TestDeleteApplicationFirewallRules(t *testing.T) {
 	// Add dummy content
 	manager, _ := NewFirewallRuleDummyClient()
-
 	project := "nginx-host-project"
-	serviceProjects := []string{"nginx-demo", "nginx-training"}
-	applications := []string{"front"}
+	serviceProject := "nginx-demo"
+	application := "front"
+	ruleCustomName := "allow-publicly"
+	name := fmt.Sprintf("%s-%s-%s", serviceProject, application, ruleCustomName)
+	gRule := compute.Firewall{Name: name, Network: "global/networks/default", Allowed: []*compute.FirewallAllowed{&compute.FirewallAllowed{Ports: []string{"80", "443"}, IPProtocol: "TCP"}}}
+	manager.Rules[project] = append(manager.Rules[project], &gRule)
 
-	for _, serviceProject := range serviceProjects {
-		for _, application := range applications {
-			name := fmt.Sprintf("%s-%s-%s", serviceProject, application, "allow-publicly")
-			rule := compute.Firewall{Name: name, Network: "global/networks/default", Allowed: []*compute.FirewallAllowed{&compute.FirewallAllowed{Ports: []string{"80", "443"}, IPProtocol: "TCP"}}}
-			manager.Rules[project] = append(manager.Rules[project], &rule)
-		}
-	}
-
-	// Ask for delete application in nginx-demo project
-	app := models.ApplicationRules{Project: project, ServiceProject: serviceProjects[0], Application: applications[0]}
-	err := DeleteApplicationFirewallRules(manager, app)
+	// Ask to delete a rule
+	err := DeleteFirewallRule(manager, project, serviceProject, application, ruleCustomName)
 	if err != nil {
 		t.Fatalf("Unexpected error during Delete. Got %v\n", err)
 	}
 
 	// Verify empty rules
-	apprules, err := ListApplicationFirewallRules(manager, project, serviceProjects[0], applications[0])
+	apprules, err := ListFirewallRule(manager, project, serviceProject, application)
 	if err != nil {
-		t.Errorf("Unexpected error during ListApplicationFirewallRules for project %v", serviceProjects[0])
+		t.Fatalf("Unexpected error during Delete. Got %v\n", err)
 	}
 	expected := 0
 	if len(apprules.Rules) != expected {
-		t.Errorf("Bad rules count for service project %v and application %v. Got %d expected %d", serviceProjects[1], applications[0], len(apprules.Rules), expected)
-	}
-
-	// Verify Others projects still exists
-	apprules, err = ListApplicationFirewallRules(manager, project, serviceProjects[1], applications[0])
-	if err != nil {
-		t.Errorf("Unexpected error during ListApplicationFirewallRules for project %v", serviceProjects[1])
-	}
-
-	expected = 1
-	if len(apprules.Rules) != expected {
-		t.Errorf("Bad rules count for service project %v and application %v. Got %d expected %d", serviceProjects[1], applications[0], len(apprules.Rules), expected)
+		t.Errorf("Bad rules count. Got %d expected %d", len(apprules.Rules), expected)
 	}
 
 	// Try to delete on non-existing project
-	app = models.ApplicationRules{Project: "non-existing", ServiceProject: serviceProjects[0], Application: applications[0]}
-	err = DeleteApplicationFirewallRules(manager, app)
+	err = DeleteFirewallRule(manager, project, serviceProject, application, ruleCustomName)
 	if err == nil {
 		t.Fatalf("Expected error during Delete on non existing project. Got %v\n", err)
 	}
-
 }

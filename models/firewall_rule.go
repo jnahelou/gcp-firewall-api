@@ -9,27 +9,26 @@ import (
 
 // FirewallRule descibe a firewall rule
 type FirewallRule struct {
-	Rule       compute.Firewall `json:"rule"`
+	Rule       compute.Firewall `json:"item"`
 	CustomName string           `json:"custom_name"`
 }
 
-// ApplicationRules defines our rule
-type ApplicationRules struct {
-	Project        string
-	ServiceProject string
-	Application    string
-	Rules          FirewallRuleList
-}
+// FirewallRules describe a set of firewall rule
+type FirewallRules []FirewallRule
 
-// FirewallRuleList describe a set of firewall rull
-type FirewallRuleList []FirewallRule
+// ApplicationRule describe and end-user response
+type ApplicationRule struct {
+	Project        string        `json:"project"`
+	ServiceProject string        `json:"service_project"`
+	Application    string        `json:"application"`
+	Rules          FirewallRules `json:"data"`
+}
 
 // FirewallRuleManager contains methods to manage firewall rules
 type FirewallRuleManager interface {
-	ListFirewallRules(project string) ([]*compute.Firewall, error)
+	ListFirewallRule(project string) ([]*compute.Firewall, error)
 	GetFirewallRule(project, name string) (*compute.Firewall, error)
 	CreateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error)
-	UpdateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error)
 	DeleteFirewallRule(project, name string) error
 }
 
@@ -56,8 +55,8 @@ func NewFirewallRuleClient() (*FirewallRuleClient, error) {
 	return &manager, err
 }
 
-// ListFirewallRules returns given project's firewall rule
-func (f *FirewallRuleClient) ListFirewallRules(project string) ([]*compute.Firewall, error) {
+// ListFirewallRule returns given project's firewall rule
+func (f *FirewallRuleClient) ListFirewallRule(project string) ([]*compute.Firewall, error) {
 	ctx := context.Background()
 
 	req := f.computeService.Firewalls.List(project)
@@ -84,22 +83,11 @@ func (f *FirewallRuleClient) GetFirewallRule(project, name string) (*compute.Fir
 
 // CreateFirewallRule create given firewall rule on given project
 func (f *FirewallRuleClient) CreateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error) {
-	ctx := context.Background()
-
-	_, err := f.computeService.Firewalls.Insert(project, rule).Context(ctx).Do()
+	_, err := f.computeService.Firewalls.Insert(project, rule).Context(context.Background()).Do()
 	if err != nil {
 		return nil, err
 	}
 
-	return f.GetFirewallRule(project, rule.Name)
-}
-
-// UpdateFirewallRule update given firewall rule in given project
-func (f *FirewallRuleClient) UpdateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error) {
-	_, err := f.computeService.Firewalls.Update(project, rule.Name, rule).Context(context.Background()).Do()
-	if err != nil {
-		return nil, err
-	}
 	return f.GetFirewallRule(project, rule.Name)
 }
 
