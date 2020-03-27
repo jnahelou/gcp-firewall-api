@@ -111,7 +111,7 @@ func CreateFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
 // CreateFirewallRuleHandler create a given rule
 func CreateFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 	project, serviceProject, application, rule := getVars(r)
-	logrus.Debugf("Ask to recreate rule %s %s %s %s\n", project, serviceProject, application, rule)
+	logrus.Debugf("Ask to create rule %s %s %s %s\n", project, serviceProject, application, rule)
 
 	// Decode given rule in order to create it
 	var body compute.Firewall
@@ -194,13 +194,26 @@ func UpdateFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = models.CreateFirewallRule(manager, project, serviceProject, application, rule, frule)
+	googleRule, err := models.CreateFirewallRule(manager, project, serviceProject, application, rule, frule)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	// Cast into our rule
+	customRule := models.FirewallRule{
+		CustomName: rule,
+		Rule:       *googleRule,
+	}
+
+	res, err := json.Marshal(customRule)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, string(res))
 }
 
 // DeleteFirewallRuleHandler delete the given firewall rule
