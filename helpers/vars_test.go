@@ -23,7 +23,7 @@ var results map[string]string = make(map[string]string)
 func testFunction(r *http.Request) {
 	project, serviceProject, application, rule := GetMuxVars(r)
 	results["project"] = project
-	results["service-project"] = serviceProject
+	results["service_project"] = serviceProject
 	results["application"] = application
 	results["rule"] = rule
 }
@@ -38,7 +38,7 @@ func TestGetMuxVars(t *testing.T) {
 			ExpectedValue: "dummy_project",
 		},
 		TestCase{
-			Parameter:     "service-project",
+			Parameter:     "service_project",
 			ExpectedValue: "dummy_service_project",
 		},
 		TestCase{

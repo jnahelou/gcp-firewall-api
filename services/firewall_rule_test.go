@@ -68,7 +68,7 @@ func (f *FirewallRuleDummyClient) DeleteFirewallRule(project, name string) error
 func TestCreateFirewallRule(t *testing.T) {
 	manager, _ := NewFirewallRuleDummyClient()
 	project := "dummy-project"
-	serviceProject := "dummy-service-project"
+	serviceProject := "dummy-service_project"
 	application := "dummy-application"
 	var rules models.FirewallRules
 	rule := models.FirewallRule{

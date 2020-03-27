@@ -46,11 +46,11 @@ func main() {
 	r.Use(contentTypeMiddleware)
 
 	// Manage sets of rules
-	managerRouter := r.PathPrefix("/project/{project}/service-project/{service-project}/application/{application}").Subrouter()
+	managerRouter := r.PathPrefix("/project/{project}/service_project/{service_project}/application/{application}").Subrouter()
 	managerRouter.Path("").Methods("GET").HandlerFunc(handlers.ListFirewallRuleHandler)
 
 	// Manage a specific rule
-	ruleRouter := r.PathPrefix("/project/{project}/service-project/{service-project}/application/{application}/name/{rule}").Subrouter()
+	ruleRouter := r.PathPrefix("/project/{project}/service_project/{service_project}/application/{application}/firewall_rule/{rule}").Subrouter()
 	ruleRouter.Path("").Methods("POST").HandlerFunc(handlers.CreateFirewallRuleHandler)
 	ruleRouter.Path("").Methods("GET").HandlerFunc(handlers.GetFirewallRuleHandler)
 	ruleRouter.Path("").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRuleHandler)
