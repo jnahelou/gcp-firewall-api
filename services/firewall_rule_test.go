@@ -2,11 +2,17 @@ package services
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/jnahelou/gcp-firewall-api/models"
+	"github.com/sirupsen/logrus"
 	compute "google.golang.org/api/compute/v1"
 )
+
+func init() {
+	logrus.SetOutput(ioutil.Discard)
+}
 
 // FirewallRuleDummyClient provides primitives to collect rules from in-memory rules list
 type FirewallRuleDummyClient struct {
@@ -154,8 +160,6 @@ func TestDeleteApplicationFirewallRules(t *testing.T) {
 			manager.Rules[project] = append(manager.Rules[project], &rule)
 		}
 	}
-
-	fmt.Printf("%+v\n", manager.Rules)
 
 	// Ask for delete application in nginx-demo project
 	app := models.ApplicationRules{Project: project, ServiceProject: serviceProjects[0], Application: applications[0]}

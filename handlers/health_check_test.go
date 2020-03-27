@@ -1,10 +1,17 @@
 package handlers
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
+
+func init() {
+	logrus.SetOutput(ioutil.Discard)
+}
 
 func TestHealthCheckHandler(t *testing.T) {
 	// Create a request to pass to our handler. We don't have any query parameters for now, so we'll

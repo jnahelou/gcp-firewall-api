@@ -1,62 +1,53 @@
 package helpers
 
 import (
+	"io/ioutil"
 	"net/http"
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 )
 
-type testCase struct {
+func init() {
+	logrus.SetOutput(ioutil.Discard)
+}
+
+type TestCase struct {
 	Parameter     string
 	ExpectedValue string
-	TestFuncton   func(r *http.Request) string
 }
 
-func Project(r *http.Request) string {
-	v, _, _, _ := GetMuxVars(r)
-	return v
-}
+var results map[string]string = make(map[string]string)
 
-func ServiceProject(r *http.Request) string {
-	_, v, _, _ := GetMuxVars(r)
-	return v
-}
-
-func Application(r *http.Request) string {
-	_, _, v, _ := GetMuxVars(r)
-	return v
-}
-
-func Rule(r *http.Request) string {
-	_, _, _, v := GetMuxVars(r)
-	return v
+func testFunction(r *http.Request) {
+	project, serviceProject, application, rule := GetMuxVars(r)
+	results["project"] = project
+	results["service-project"] = serviceProject
+	results["application"] = application
+	results["rule"] = rule
 }
 
 func TestGetMuxVars(t *testing.T) {
 	r := *&http.Request{}
 
 	// Prepare test
-	cases := []testCase{
-		testCase{
+	cases := []TestCase{
+		TestCase{
 			Parameter:     "project",
 			ExpectedValue: "dummy_project",
-			TestFuncton:   Project,
 		},
-		testCase{
+		TestCase{
 			Parameter:     "service-project",
 			ExpectedValue: "dummy_service_project",
-			TestFuncton:   ServiceProject,
 		},
-		testCase{
+		TestCase{
 			Parameter:     "application",
 			ExpectedValue: "dummy_application",
-			TestFuncton:   Application,
 		},
-		testCase{
+		TestCase{
 			Parameter:     "rule",
 			ExpectedValue: "dummy_roule",
-			TestFuncton:   Rule,
 		},
 	}
 
@@ -69,11 +60,14 @@ func TestGetMuxVars(t *testing.T) {
 	// Set parametters in the dummy request
 	r = *mux.SetURLVars(&r, expected)
 
+	// Execute tested function
+	testFunction(&r)
+
 	// Execute each tests
 	for _, c := range cases {
 		t.Run(c.Parameter, func(t *testing.T) {
-			if result := c.TestFuncton(&r); result != c.ExpectedValue {
-				t.Errorf("Expected %s got %s", c.ExpectedValue, result)
+			if results[c.Parameter] != c.ExpectedValue {
+				t.Errorf("Expected %s got %s", c.ExpectedValue, results[c.Parameter])
 			}
 		})
 	}
