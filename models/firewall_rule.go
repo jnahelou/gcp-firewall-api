@@ -23,7 +23,7 @@ type FirewallRuleList []FirewallRule
 type FirewallRuleManager interface {
 	ListFirewallRules(project string) ([]*compute.Firewall, error)
 	GetFirewallRule(project, name string) (*compute.Firewall, error)
-	CreateFirewallRule(project string, rule *compute.Firewall) error
+	CreateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error)
 	UpdateFirewallRule(project string, rule *compute.Firewall) error
 	DeleteFirewallRule(project, name string) error
 }
@@ -78,18 +78,17 @@ func (f *FirewallRuleClient) GetFirewallRule(project, name string) (*compute.Fir
 }
 
 // CreateFirewallRule create given firewall rule on given project
-func (f *FirewallRuleClient) CreateFirewallRule(project string, rule *compute.Firewall) error {
+func (f *FirewallRuleClient) CreateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error) {
 	ctx := context.Background()
 
 	resp, err := f.computeService.Firewalls.Insert(project, rule).Context(ctx).Do()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	logrus.Debugf("CreateFirewallRule result : %v\n", resp)
 
-	_, err = f.GetFirewallRule(project, rule.Name)
-	return err
+	return f.GetFirewallRule(project, rule.Name)
 }
 
 // UpdateFirewallRule update given firewall rule in given project
@@ -142,7 +141,7 @@ func ListApplicationFirewallRules(manager FirewallRuleManager, project, serviceP
 }
 
 // CreateFirewallRule create given firewall rule on given project
-func CreateFirewallRule(manager FirewallRuleManager, project string, serviceProject string, application string, ruleName string, rule compute.Firewall) error {
+func CreateFirewallRule(manager FirewallRuleManager, project string, serviceProject string, application string, ruleName string, rule compute.Firewall) (*compute.Firewall, error) {
 	rule.Name = fmt.Sprintf("%s-%s-%s", serviceProject, application, ruleName)
 	logrus.Debugf("Manager will create %s on %s\n", rule.Name, project)
 	return manager.CreateFirewallRule(project, &rule)
@@ -164,7 +163,7 @@ func CreateApplicationFirewallRules(manager FirewallRuleManager, appRules Applic
 	var errs []error
 	for _, rule := range appRules.Rules {
 		ruleName := rule.CustomName
-		err := CreateFirewallRule(manager, project, serviceProject, application, ruleName, rule.Rule)
+		_, err := CreateFirewallRule(manager, project, serviceProject, application, ruleName, rule.Rule)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"go-error": err,

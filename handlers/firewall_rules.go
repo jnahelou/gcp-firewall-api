@@ -127,13 +127,25 @@ func CreateFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = models.CreateFirewallRule(manager, project, serviceProject, application, rule, body)
+	googleRule, err := models.CreateFirewallRule(manager, project, serviceProject, application, rule, body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Cast into our rule
+	customRule := models.FirewallRule{
+		CustomName: rule,
+		Rule:       *googleRule,
+	}
+
+	res, err := json.Marshal(customRule)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
+	fmt.Fprint(w, string(res))
 }
 
 // DeleteFirewallRulesHandler delete all application firewall rules
@@ -182,7 +194,7 @@ func UpdateFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = models.CreateFirewallRule(manager, project, serviceProject, application, rule, frule)
+	_, err = models.CreateFirewallRule(manager, project, serviceProject, application, rule, frule)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
