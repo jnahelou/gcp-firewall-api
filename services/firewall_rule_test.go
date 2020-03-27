@@ -1,16 +1,14 @@
-package models
+package services
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/jnahelou/gcp-firewall-api/models"
 	compute "google.golang.org/api/compute/v1"
 )
 
-/*
- * FirewallRuleDummyClient provides primitives to collect rules from in-memory rules list
- *
- */
+// FirewallRuleDummyClient provides primitives to collect rules from in-memory rules list
 type FirewallRuleDummyClient struct {
 	Rules map[string][]*compute.Firewall
 }
@@ -37,22 +35,23 @@ func (f *FirewallRuleDummyClient) GetFirewallRule(project, name string) (*comput
 	return nil, fmt.Errorf("Rule not found")
 }
 
-func (f *FirewallRuleDummyClient) CreateFirewallRule(project string, rule *compute.Firewall) error {
+func (f *FirewallRuleDummyClient) CreateFirewallRule(project string, rule *compute.Firewall) (*compute.Firewall, error) {
 	for _, r := range f.Rules[project] {
 		if r.Name == rule.Name {
-			return fmt.Errorf("Rule already exists")
+			return nil, fmt.Errorf("Rule already exists")
 		}
 	}
 
 	f.Rules[project] = append(f.Rules[project], rule)
-	return nil
+	return rule, nil
 }
+
 func (f *FirewallRuleDummyClient) UpdateFirewallRule(project string, rule *compute.Firewall) error {
-	//TODO
+	// TODO
 	return nil
 }
 
-func (f *FirewallRuleDummyClient) DeleteFirewallRule(project string, name string) error {
+func (f *FirewallRuleDummyClient) DeleteFirewallRule(project, name string) error {
 	rules := f.Rules[project]
 	for index, rule := range rules {
 		// Swap with last and drop last
@@ -66,24 +65,20 @@ func (f *FirewallRuleDummyClient) DeleteFirewallRule(project string, name string
 	return nil
 }
 
-/*
- * Lets check !
- *
- */
 func TestCreateApplicationFirewallRules(t *testing.T) {
 	manager, _ := NewFirewallRuleDummyClient()
 
 	project := "dummy-project"
 	serviceProject := "dummy-service-project"
 	application := "dummy-application"
-	var rules FirewallRuleList
-	rule := FirewallRule{
+	var rules models.FirewallRuleList
+	rule := models.FirewallRule{
 		Rule:       compute.Firewall{Name: "remote", Network: "global/networks/default", Allowed: []*compute.FirewallAllowed{&compute.FirewallAllowed{Ports: []string{"22", "3389"}, IPProtocol: "TCP"}}},
 		CustomName: "allow-tcp-22-3389",
 	}
 	rules = append(rules, rule)
 
-	app := ApplicationRules{
+	app := models.ApplicationRules{
 		Project:        project,
 		ServiceProject: serviceProject,
 		Application:    application,
@@ -163,7 +158,7 @@ func TestDeleteApplicationFirewallRules(t *testing.T) {
 	fmt.Printf("%+v\n", manager.Rules)
 
 	// Ask for delete application in nginx-demo project
-	app := ApplicationRules{Project: project, ServiceProject: serviceProjects[0], Application: applications[0]}
+	app := models.ApplicationRules{Project: project, ServiceProject: serviceProjects[0], Application: applications[0]}
 	err := DeleteApplicationFirewallRules(manager, app)
 	if err != nil {
 		t.Fatalf("Unexpected error during Delete. Got %v\n", err)
@@ -191,7 +186,7 @@ func TestDeleteApplicationFirewallRules(t *testing.T) {
 	}
 
 	// Try to delete on non-existing project
-	app = ApplicationRules{Project: "non-existing", ServiceProject: serviceProjects[0], Application: applications[0]}
+	app = models.ApplicationRules{Project: "non-existing", ServiceProject: serviceProjects[0], Application: applications[0]}
 	err = DeleteApplicationFirewallRules(manager, app)
 	if err == nil {
 		t.Fatalf("Expected error during Delete on non existing project. Got %v\n", err)
