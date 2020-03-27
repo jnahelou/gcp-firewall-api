@@ -5,26 +5,16 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/jnahelou/gcp-firewall-api/helpers"
 	"github.com/jnahelou/gcp-firewall-api/models"
 	"github.com/jnahelou/gcp-firewall-api/services"
 	"github.com/sirupsen/logrus"
 	compute "google.golang.org/api/compute/v1"
 )
 
-// TODO move to helpers
-func getVars(r *http.Request) (project, serviceProject, application, rule string) {
-	vars := mux.Vars(r)
-	project = vars["project"]
-	serviceProject = vars["service-project"]
-	application = vars["application"]
-	rule = vars["rule"]
-	return
-}
-
 // ListFirewallRulesHandler returns a set of firewall rules
 func ListFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
-	project, serviceProject, application, _ := getVars(r)
+	project, serviceProject, application, _ := helpers.GetMuxVars(r)
 
 	manager, err := models.NewFirewallRuleClient()
 	if err != nil {
@@ -48,7 +38,7 @@ func ListFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
 
 // DeleteFirewallRulesHandler delete all application firewall rules
 func DeleteFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
-	project, serviceProject, application, _ := getVars(r)
+	project, serviceProject, application, _ := helpers.GetMuxVars(r)
 	logrus.Debugf("Ask to delete all rules for application %s in project %s/%s\n", application, project, serviceProject)
 
 	manager, err := models.NewFirewallRuleClient()
@@ -75,7 +65,7 @@ func DeleteFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
 
 // CreateFirewallRulesHandler create a set of firewall rules
 func CreateFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
-	project, serviceProject, application, _ := getVars(r)
+	project, serviceProject, application, _ := helpers.GetMuxVars(r)
 
 	var rules models.FirewallRuleList
 
@@ -108,7 +98,7 @@ func CreateFirewallRulesHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetFirewallRuleHandler return mathing firewall rule
 func GetFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
-	project, serviceProject, application, rule := getVars(r)
+	project, serviceProject, application, rule := helpers.GetMuxVars(r)
 
 	manager, err := models.NewFirewallRuleClient()
 	if err != nil {
@@ -138,7 +128,7 @@ func GetFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 // CreateFirewallRuleHandler create a given rule
 func CreateFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
-	project, serviceProject, application, rule := getVars(r)
+	project, serviceProject, application, rule := helpers.GetMuxVars(r)
 	logrus.Debugf("Ask to create rule %s %s %s %s\n", project, serviceProject, application, rule)
 
 	// Decode given rule in order to create it
@@ -178,7 +168,7 @@ func CreateFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 // UpdateFirewallRuleHandler recreate the given firewall rule
 func UpdateFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
-	project, serviceProject, application, rule := getVars(r)
+	project, serviceProject, application, rule := helpers.GetMuxVars(r)
 	logrus.Debugf("Ask to recreate rule %s %s %s %s\n", project, serviceProject, application, rule)
 
 	var frule compute.Firewall
@@ -219,7 +209,7 @@ func UpdateFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 // DeleteFirewallRuleHandler delete the given firewall rule
 func DeleteFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
-	project, serviceProject, application, rule := getVars(r)
+	project, serviceProject, application, rule := helpers.GetMuxVars(r)
 	logrus.Debugf("Ask to delete rule %s %s %s %s\n", project, serviceProject, application, rule)
 
 	manager, err := models.NewFirewallRuleClient()
