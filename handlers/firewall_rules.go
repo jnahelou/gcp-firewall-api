@@ -49,7 +49,7 @@ func GetFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 	applicationRule, err := services.GetFirewallRule(manager, project, serviceProject, application, rule)
 
-	// Handle a proper 404
+	// Handle Google Error
 	if value, ok := err.(*googleapi.Error); ok {
 		w.WriteHeader(value.Code)
 		fmt.Fprint(w, models.NewGoogleApplicationError(value).JSON())
@@ -89,6 +89,13 @@ func CreateFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	applicationRule, err := services.CreateFirewallRule(manager, project, serviceProject, application, rule, body)
+	// Handle Google Error
+	if value, ok := err.(*googleapi.Error); ok {
+		w.WriteHeader(value.Code)
+		fmt.Fprint(w, models.NewGoogleApplicationError(value).JSON())
+		return
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -117,7 +124,7 @@ func DeleteFirewallRuleHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = services.DeleteFirewallRule(manager, project, serviceProject, application, rule)
 
-	// Handle a proper 404
+	// Handle Google Error
 	if value, ok := err.(*googleapi.Error); ok {
 		w.WriteHeader(value.Code)
 		fmt.Fprint(w, models.NewGoogleApplicationError(value).JSON())
