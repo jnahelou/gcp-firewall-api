@@ -3,18 +3,25 @@ stages:
   - build
   - deploy
 
+variables:
+  PROJECT: int-lz1-dtp
+
 .template: &template
   tags:
     - adeo-cloud
 
-.gcloud_template: &gcloud_template
+.gcloud: &gcloud
+  - vault version
+  - gcloud version
+  - export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id=$VAULT_ROLE_ID secret_id=$VAULT_SECRET_ID)
+  - vault kv get -field=service_account_key secret/gcp-firewall-api | gcloud auth activate-service-account --key-file=-
+
+Go format:
   <<: *template
-  before_script:
-    - vault version
-    - gcloud version
-    - export VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id=$VAULT_ROLE_ID secret_id=$VAULT_SECRET_ID)
-    - vault kv get -field=service_account_key secret/gcp-firewall-api | gcloud auth activate-service-account --key-file=-
-    - export PROJECT=$(vault kv get -field=project secret/gcp-firewall-api)
+  stage: test
+  image: golang:1.13
+  script:
+    - test $(gofmt -l -e . | wc -l) -eq 0
 
 Test:
   <<: *template
@@ -25,7 +32,7 @@ Test:
   script:
     - go test -v ./...
 
-Build:
+Compile:
   <<: *template
   stage: build
   image: golang:1.13
@@ -44,21 +51,28 @@ Build docker image:
   stage: build
   services:
     - docker:19.03.8-dind
-  before_script:
-    - docker info
   script:
-    - docker build --tag adeo/gcp-firewall-api .
-
-Google Cloud Build:
-  <<: *gcloud_template
-  stage: build
-  image: adeo-docker-adeo-iaaswecan-dev.jfrog.io/iwc-gcloud-vault-terraform:alpine
-  script:
-    - gcloud builds submit --tag gcr.io/${PROJECT}/gcp-firewall-api --project ${PROJECT}
+    - docker build --tag gcr.io/${PROJECT}/gcp-firewall-api:latest .
+    - docker save gcr.io/${PROJECT}/gcp-firewall-api:latest > image.tar
+  artifacts:
+    paths:
+      - image.tar
+    expire_in: 1 hrs
 
 Google Cloud Run:
-  <<: *gcloud_template
+  <<: *template
   stage: deploy
   image: adeo-docker-adeo-iaaswecan-dev.jfrog.io/iwc-gcloud-vault-terraform:alpine
+  services:
+    - docker:19.03.8-dind
+  before_script:
+    - *gcloud
+    - gcloud auth configure-docker --quiet
+    - export VERSION=$(git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || echo "v0.0.0-${CI_COMMIT_SHORT_SHA}")
+    - docker load -i image.tar
   script:
-    - gcloud run deploy --image gcr.io/${PROJECT}/gcp-firewall-api gcp-firewall-api --platform managed --no-allow-unauthenticated --quiet --project ${PROJECT}
+    - docker push gcr.io/${PROJECT}/gcp-firewall-api:latest
+    - docker tag gcr.io/${PROJECT}/gcp-firewall-api:latest gcr.io/${PROJECT}/gcp-firewall-api:${VERSION}
+    - docker push gcr.io/${PROJECT}/gcp-firewall-api:${VERSION}
+    - gcloud run deploy --image gcr.io/${PROJECT}/gcp-firewall-api:${VERSION} gcp-firewall-api --platform managed --quiet --region europe-west1 --project ${PROJECT}
+  dependencies: ["Build docker image"]
