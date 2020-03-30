@@ -18,19 +18,19 @@ DEMO only. Do not use it on production. _Done over a long night during covid loc
 Create rules for an applications
 
 ```bash
-$ curl -X POST 127.0.0.1:8080/project/cka-jnu/service-project/foo-sp/application/kubernetes-the-hard-way --data '[{"CustomName": "test-ssh", "Rule": {"name": "dummy","network": "global/networks/default","allowed": [{"IPProtocol": "TCP", "ports": ["22"]}],"targetTags": ["foo"]}}]'
+$ curl -X POST 127.0.0.1:8080/project/cka-jnu/service_project/foo-sp/application/kubernetes-the-hard-way --data '[{"CustomName": "test-ssh", "Rule": {"name": "dummy","network": "global/networks/default","allowed": [{"IPProtocol": "TCP", "ports": ["22"]}],"targetTags": ["foo"]}}]'
 ```
 
 Verify rules for the application created
 
 ```bash
-$ curl 127.0.0.1:8080/project/cka-jnu/service-project/foo-sp/application/kubernetes-the-hard-way | jq
+$ curl 127.0.0.1:8080/project/cka-jnu/service_project/foo-sp/application/kubernetes-the-hard-way | jq
 ```
 
 Delete rules for the application created
 
 ```bash
-$ curl -X DELETE 127.0.0.1:8080/project/cka-jnu/service-project/foo-sp/application/kubernetes-the-hard-way | jq
+$ curl -X DELETE 127.0.0.1:8080/project/cka-jnu/service_project/foo-sp/application/kubernetes-the-hard-way | jq
 ```
 
 ## Rules

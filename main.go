@@ -5,15 +5,11 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/adeo/iwc-gcp-firewall-api/handlers"
+	"github.com/adeo/iwc-gcp-firewall-api/helpers"
 	"github.com/gorilla/mux"
-	"github.com/jnahelou/gcp-firewall-api/handlers"
-	"github.com/jnahelou/gcp-firewall-api/helpers"
 	"github.com/sirupsen/logrus"
 )
-
-func handleHealth(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Ok")
-}
 
 // log access log
 func loggingMiddleware(next http.Handler) http.Handler {
@@ -50,17 +46,16 @@ func main() {
 	r.Use(contentTypeMiddleware)
 
 	// Manage sets of rules
-	managerRouter := r.PathPrefix("/project/{project}/service-project/{service-project}/application/{application}").Subrouter()
-	managerRouter.Path("").Methods("GET").HandlerFunc(handlers.ListFirewallRulesHandler)
-	managerRouter.Path("").Methods("POST").HandlerFunc(handlers.CreateFirewallRulesHandler)
-	managerRouter.Path("").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRulesHandler)
+	managerRouter := r.PathPrefix("/project/{project}/service_project/{service_project}/application/{application}").Subrouter()
+	managerRouter.Path("").Methods("GET").HandlerFunc(handlers.ListFirewallRuleHandler)
 
 	// Manage a specific rule
-	ruleRouter := r.PathPrefix("/project/{project}/service-project/{service-project}/application/{application}/name/{rule}").Subrouter()
-	ruleRouter.Path("").Methods("PUT").HandlerFunc(handlers.UpdateFirewallRuleHandler)
+	ruleRouter := r.PathPrefix("/project/{project}/service_project/{service_project}/application/{application}/firewall_rule/{rule}").Subrouter()
+	ruleRouter.Path("").Methods("POST").HandlerFunc(handlers.CreateFirewallRuleHandler)
+	ruleRouter.Path("").Methods("GET").HandlerFunc(handlers.GetFirewallRuleHandler)
 	ruleRouter.Path("").Methods("DELETE").HandlerFunc(handlers.DeleteFirewallRuleHandler)
 
-	r.Path("/_health").Methods("GET").HandlerFunc(handleHealth)
+	r.Path("/_health").Methods("GET").HandlerFunc(handlers.HealthCheckHandler)
 
 	helpers.InitLogger()
 
